@@ -9,6 +9,11 @@ import Foundation
 
 struct FileNode: Identifiable, Hashable {
 
+    enum Kind {
+        case directory
+        case file
+    }
+
     // MARK: - Identity
     let id: String
     let relativePath: String
@@ -16,24 +21,30 @@ struct FileNode: Identifiable, Hashable {
     // MARK: - File info
     let url: URL
     let name: String
-    let isDirectory: Bool
-    let isSelectable: Bool
+    let kind: Kind
 
     // MARK: - Tree
     var children: [FileNode]?
 
+    var isDirectory: Bool {
+        kind == .directory
+    }
+
+    var isSelectable: Bool {
+        kind == .file
+    }
+
     init(
         url: URL,
         relativePath: String,
-        isDirectory: Bool,
+        kind: Kind,
         children: [FileNode]? = nil
     ) {
         self.url = url
         self.relativePath = relativePath
         self.id = relativePath
         self.name = url.lastPathComponent
-        self.isDirectory = isDirectory
-        self.isSelectable = !isDirectory
+        self.kind = kind
         self.children = children
     }
 }

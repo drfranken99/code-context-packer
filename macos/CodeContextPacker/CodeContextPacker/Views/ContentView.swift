@@ -12,31 +12,94 @@ struct ContentView: View {
 
     // Temporary single-project state (will support multiple tabs later)
     @StateObject private var project: Project = Project()
-
-
+    @State private var focusedNodeIDs: Set<String> = []
 
     var body: some View {
         NavigationSplitView {
             // Sidebar: file tree
             if let root = project.fileTree {
-                List {
+                List(selection: $focusedNodeIDs) {
                     OutlineGroup(root, children: \.children) { node in
-                        HStack {
-                            if node.isSelectable {
-                                Image(systemName: project.isSelected(node) ? "checkmark.circle.fill" : "circle")
-                                    .foregroundStyle(project.isSelected(node) ? .green : .secondary)
+                        if node.isDirectory {
+                            // Folder row (keep default disclosure behavior)
+                            HStack {
+                                Text(node.name)
+                            }
+                            .tag(node.id)
+                        } else {
+                            // File row with check toggle button
+                            HStack {
+                                Button {
+                                    project.toggleSelection(for: node)
+                                } label: {
+                                    Image(systemName: project.isSelected(node)
+                                          ? "checkmark.circle.fill"
+                                          : "circle")
+                                        .foregroundStyle(project.isSelected(node) ? .green : .secondary)
+                                }
+                                .buttonStyle(.plain)
+
+                                Text(node.name)
+                                    .fontWeight(project.isSelected(node) ? .semibold : .regular)
+                            }
+                            .tag(node.id)
+                        }
+                    }
+                }
+                .onKeyPress { event in
+                    guard event.key == .space else {
+                        return .ignored
+                    }
+
+                    // 1) Collect selected file nodes (ignore folders)
+                    let selectedFiles: [FileNode] = {
+                        guard let root = project.fileTree else { return [] }
+
+                        func collect(from node: FileNode) -> [FileNode] {
+                            var result: [FileNode] = []
+
+                            if focusedNodeIDs.contains(node.id), !node.isDirectory {
+                                result.append(node)
                             }
 
-                            Text(node.name)
-                                .fontWeight(project.isSelected(node) ? .semibold : .regular)
+                            if let children = node.children {
+                                for child in children {
+                                    result.append(contentsOf: collect(from: child))
+                                }
+                            }
+                            return result
                         }
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            if !node.isDirectory {
-                                project.toggleSelection(for: node)
+
+                        return collect(from: root)
+                    }()
+
+                    guard !selectedFiles.isEmpty else {
+                        return .handled
+                    }
+
+                    // 2) Determine if any selected file is unchecked
+                    let hasUnchecked = selectedFiles.contains {
+                        !project.isSelected($0)
+                    }
+
+                    // 3) Apply bulk toggle policy
+                    if hasUnchecked {
+                        // Check all (only toggle unchecked)
+                        for file in selectedFiles where !project.isSelected(file) {
+                            DispatchQueue.main.async {
+                                project.toggleSelection(for: file)
+                            }
+                        }
+                    } else {
+                        // Uncheck all (only toggle checked)
+                        for file in selectedFiles where project.isSelected(file) {
+                            DispatchQueue.main.async {
+                                project.toggleSelection(for: file)
                             }
                         }
                     }
+
+                    return .handled
                 }
             } else {
                 Text("No project loaded")

@@ -68,10 +68,12 @@ final class Project: ObservableObject, Identifiable {
             children = childNodes.isEmpty ? nil : childNodes
         }
 
+        let kind: FileNode.Kind = isDirectory ? .directory : .file
+
         return FileNode(
             url: url,
             relativePath: relativePath,
-            isDirectory: isDirectory,
+            kind: kind,
             children: children
         )
     }
