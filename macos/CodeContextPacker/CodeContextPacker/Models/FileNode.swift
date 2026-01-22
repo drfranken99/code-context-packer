@@ -8,17 +8,32 @@
 import Foundation
 
 struct FileNode: Identifiable, Hashable {
-    let id: UUID
+
+    // MARK: - Identity
+    let id: String
+    let relativePath: String
+
+    // MARK: - File info
     let url: URL
     let name: String
     let isDirectory: Bool
-    var children: [FileNode]
+    let isSelectable: Bool
 
-    init(url: URL, isDirectory: Bool, children: [FileNode] = []) {
-        self.id = UUID()
+    // MARK: - Tree
+    var children: [FileNode]?
+
+    init(
+        url: URL,
+        relativePath: String,
+        isDirectory: Bool,
+        children: [FileNode]? = nil
+    ) {
         self.url = url
+        self.relativePath = relativePath
+        self.id = relativePath
         self.name = url.lastPathComponent
         self.isDirectory = isDirectory
+        self.isSelectable = !isDirectory
         self.children = children
     }
 }
