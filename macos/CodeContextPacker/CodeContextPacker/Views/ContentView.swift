@@ -18,88 +18,46 @@ struct ContentView: View {
         NavigationSplitView {
             // Sidebar: file tree
             if let root = project.fileTree {
-                List(selection: $focusedNodeIDs) {
-                    OutlineGroup(root, children: \.children) { node in
-                        if node.isDirectory {
-                            // Folder row (keep default disclosure behavior)
-                            HStack {
-                                Text(node.name)
-                            }
-                            .tag(node.id)
-                        } else {
-                            // File row with check toggle button
-                            HStack {
-                                Button {
-                                    project.toggleSelection(for: node)
-                                } label: {
-                                    Image(systemName: project.isSelected(node)
-                                          ? "checkmark.circle.fill"
-                                          : "circle")
-                                        .foregroundStyle(project.isSelected(node) ? .green : .secondary)
+                VStack(alignment: .leading) {
+                    Text(project.displayName)
+                            .font(.headline)
+                            .padding(.horizontal)
+                    List(selection: $focusedNodeIDs) {
+                        OutlineGroup(root.children ?? [], children: \.children) { node in
+                            if node.isDirectory {
+                                // Folder row (keep default disclosure behavior)
+                                HStack {
+                                    Text(node.name)
                                 }
-                                .buttonStyle(.plain)
+                                .tag(node.id)
+                            } else {
+                                // File row with check toggle button
+                                HStack {
+                                    Button {
+                                        project.toggleSelection(for: node)
+                                    } label: {
+                                        Image(systemName: project.isSelected(node)
+                                              ? "checkmark.circle.fill"
+                                              : "circle")
+                                            .foregroundStyle(project.isSelected(node) ? .green : .secondary)
+                                    }
+                                    .buttonStyle(.plain)
 
-                                Text(node.name)
-                                    .fontWeight(project.isSelected(node) ? .semibold : .regular)
+                                    Text(node.name)
+                                        .fontWeight(project.isSelected(node) ? .semibold : .regular)
+                                }
+                                .tag(node.id)
                             }
-                            .tag(node.id)
                         }
                     }
-                }
-                .onKeyPress { event in
-                    guard event.key == .space else {
-                        return .ignored
-                    }
-
-                    // 1) Collect selected file nodes (ignore folders)
-                    let selectedFiles: [FileNode] = {
-                        guard let root = project.fileTree else { return [] }
-
-                        func collect(from node: FileNode) -> [FileNode] {
-                            var result: [FileNode] = []
-
-                            if focusedNodeIDs.contains(node.id), !node.isDirectory {
-                                result.append(node)
-                            }
-
-                            if let children = node.children {
-                                for child in children {
-                                    result.append(contentsOf: collect(from: child))
-                                }
-                            }
-                            return result
+                    .onKeyPress { event in
+                        guard event.key == .space else {
+                            return .ignored
                         }
 
-                        return collect(from: root)
-                    }()
-
-                    guard !selectedFiles.isEmpty else {
+                        handleSpaceKeyToggle()
                         return .handled
                     }
-
-                    // 2) Determine if any selected file is unchecked
-                    let hasUnchecked = selectedFiles.contains {
-                        !project.isSelected($0)
-                    }
-
-                    // 3) Apply bulk toggle policy
-                    if hasUnchecked {
-                        // Check all (only toggle unchecked)
-                        for file in selectedFiles where !project.isSelected(file) {
-                            DispatchQueue.main.async {
-                                project.toggleSelection(for: file)
-                            }
-                        }
-                    } else {
-                        // Uncheck all (only toggle checked)
-                        for file in selectedFiles where project.isSelected(file) {
-                            DispatchQueue.main.async {
-                                project.toggleSelection(for: file)
-                            }
-                        }
-                    }
-
-                    return .handled
                 }
             } else {
                 Text("No project loaded")
@@ -117,9 +75,18 @@ struct ContentView: View {
             .padding()
         }
         .toolbar {
-            ToolbarItem(placement: .navigation) {
-                Button("Open Project") {
+            ToolbarItemGroup(placement: .navigation) {
+
+                Button {
                     openProject()
+                } label: {
+                    Label("Open Project", systemImage: "folder")
+                }
+
+                Button {
+                    refreshProject()
+                } label: {
+                    Label("Refresh", systemImage: "arrow.clockwise")
                 }
             }
         }
@@ -134,11 +101,54 @@ struct ContentView: View {
 
         if panel.runModal() == .OK, let url = panel.url {
             project.rootURL = url
-            // fileTree는 아직 만들지 않는다 (다음 단계)
+            project.loadFileTree()
+        }
+    }
+    
+    private func refreshProject() {
+        project.loadFileTree()
+    }
+    
+    private func handleSpaceKeyToggle() {
+        guard let root = project.fileTree else { return }
+
+        // 1) Collect selected file nodes (ignore folders)
+        func collect(from node: FileNode) -> [FileNode] {
+            var result: [FileNode] = []
+
+            if focusedNodeIDs.contains(node.id), !node.isDirectory {
+                result.append(node)
+            }
+
+            if let children = node.children {
+                for child in children {
+                    result.append(contentsOf: collect(from: child))
+                }
+            }
+            return result
+        }
+
+        let selectedFiles = collect(from: root)
+        guard !selectedFiles.isEmpty else { return }
+
+        // 2) Determine bulk toggle policy
+        let hasUnchecked = selectedFiles.contains {
+            !project.isSelected($0)
+        }
+
+        // 3) Apply toggle
+        if hasUnchecked {
+            for file in selectedFiles where !project.isSelected(file) {
+                DispatchQueue.main.async {
+                    project.toggleSelection(for: file)
+                }
+            }
+        } else {
+            for file in selectedFiles where project.isSelected(file) {
+                DispatchQueue.main.async {
+                    project.toggleSelection(for: file)
+                }
+            }
         }
     }
 }
-
-//#Preview {
-//    ContentView()
-//}

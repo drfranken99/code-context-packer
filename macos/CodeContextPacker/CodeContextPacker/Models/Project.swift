@@ -18,7 +18,10 @@ final class Project: ObservableObject, Identifiable {
     }
     @Published var fileTree: FileNode?
     @Published var selectedFileIDs: Set<String> = []
-
+    
+    var displayName: String {
+        rootURL?.lastPathComponent ?? "Project"
+    }
     
 
     func loadFileTree() {
@@ -112,7 +115,7 @@ extension Project {
 // MARK: - Packing
 extension Project {
     var packedText: String {
-        guard let url = rootURL else { return ""}
+        if rootURL == nil { return ""}
         
         let files = selectedFiles()
         guard !files.isEmpty else { return "" }
@@ -125,6 +128,7 @@ extension Project {
             return """
             📝---- file: \(relativePath) ----📝
             \(content)
+            
             """
         }
         .joined(separator: "\n\n")
