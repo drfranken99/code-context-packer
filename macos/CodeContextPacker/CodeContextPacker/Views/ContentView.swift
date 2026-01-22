@@ -17,6 +17,8 @@ struct ContentView: View {
     @State private var triggerOpenAnimation = false
     @State private var triggerRefreshAnimation = false
     @State private var triggerCopyAnimation = false
+    
+    @State private var showShortcutHelp = false
 
     var body: some View {
         NavigationSplitView {
@@ -69,7 +71,7 @@ struct ContentView: View {
                     }
                 }
             } else {
-                Text("No project loaded")
+                ContentUnavailableView("No project loaded", systemImage: "questionmark.square.dashed")
             }
         } detail: {
             // Packed context preview
@@ -121,6 +123,16 @@ struct ContentView: View {
                         .symbolEffect(.bounce.up.byLayer, options: .speed(1.8), value: triggerCopyAnimation)
                 }
                 .keyboardShortcut("c", modifiers: [.command, .shift])
+            }
+            ToolbarItem {
+                Button {
+                    showShortcutHelp.toggle()
+                } label: {
+                    Image(systemName: "questionmark.circle")
+                }
+                .popover(isPresented: $showShortcutHelp) {
+                    ShortcutHelpView()
+                }
             }
         }
     }
@@ -197,5 +209,41 @@ struct ContentView: View {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
+    }
+}
+
+struct ShortcutHelpView: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Keyboard Shortcuts")
+                .font(.headline)
+                .padding(.bottom, 4)
+            HStack {
+                Text("⌘O").font(.system(.body, design: .monospaced))
+                Text("Open Project")
+            }
+            HStack {
+                Text("⌘R").font(.system(.body, design: .monospaced))
+                Text("Refresh")
+            }
+            HStack {
+                Text("⌘⇧C").font(.system(.body, design: .monospaced))
+                Text("Copy Packed Context")
+            }
+            HStack {
+                Text("Space").font(.system(.body, design: .monospaced))
+                Text("Toggle file selection")
+            }
+            HStack {
+                Text("↑ ↓").font(.system(.body, design: .monospaced))
+                Text("Navigate files")
+            }
+            HStack {
+                Text("← →").font(.system(.body, design: .monospaced))
+                Text("Expand / collapse folders")
+            }
+        }
+        .padding()
+        .frame(width: 220)
     }
 }
