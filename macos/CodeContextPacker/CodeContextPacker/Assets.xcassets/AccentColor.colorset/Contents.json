@@ -1,7 +1,16 @@
 {
   "colors" : [
     {
-      "idiom" : "universal"
+      "color" : {
+        "color-space" : "srgb",
+        "components" : {
+          "alpha" : "1.000",
+          "blue" : "0.878",
+          "green" : "0.393",
+          "red" : "0.331"
+        }
+      },
+      "idiom" : "mac"
     }
   ],
   "info" : {
