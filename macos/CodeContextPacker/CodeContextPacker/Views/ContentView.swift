@@ -13,6 +13,10 @@ struct ContentView: View {
     // Temporary single-project state (will support multiple tabs later)
     @StateObject private var project: Project = Project()
     @State private var focusedNodeIDs: Set<String> = []
+    
+    @State private var triggerOpenAnimation = false
+    @State private var triggerRefreshAnimation = false
+    @State private var triggerCopyAnimation = false
 
     var body: some View {
         NavigationSplitView {
@@ -27,6 +31,8 @@ struct ContentView: View {
                             if node.isDirectory {
                                 // Folder row (keep default disclosure behavior)
                                 HStack {
+                                    Image(systemName: "folder")
+                                        .foregroundStyle(.secondary)
                                     Text(node.name)
                                 }
                                 .tag(node.id)
@@ -43,6 +49,9 @@ struct ContentView: View {
                                     }
                                     .buttonStyle(.plain)
 
+                                    Image(systemName: "doc.text")
+                                        .foregroundStyle(.secondary)
+                                    
                                     Text(node.name)
                                         .fontWeight(project.isSelected(node) ? .semibold : .regular)
                                 }
@@ -69,8 +78,17 @@ struct ContentView: View {
                     .font(.headline)
                     .padding(.bottom, 8)
 
-                TextEditor(text: .constant(project.packedText))
-                    .font(.system(.body, design: .monospaced))
+                if project.fileTree != nil {
+                    TextEditor(text: .constant(project.packedText))
+                        .font(.system(.body, design: .monospaced))
+                        .scrollContentBackground(.hidden)
+                        .focusable(false)
+
+                } else {
+                    Text("Open a project to preview packed context.")
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                }
             }
             .padding()
         }
@@ -79,15 +97,30 @@ struct ContentView: View {
 
                 Button {
                     openProject()
+                    triggerOpenAnimation.toggle()
                 } label: {
-                    Label("Open Project", systemImage: "folder")
+                    Image(systemName: "folder")
+                        .symbolEffect(.bounce.up.byLayer, options: .speed(1.8), value: triggerOpenAnimation)
                 }
+                .keyboardShortcut("o", modifiers: [.command])
 
                 Button {
                     refreshProject()
+                    triggerRefreshAnimation.toggle()
                 } label: {
-                    Label("Refresh", systemImage: "arrow.clockwise")
+                    Image(systemName: "arrow.clockwise")
+                        .symbolEffect(.bounce.up.byLayer, options: .speed(1.8), value: triggerRefreshAnimation)
                 }
+                .keyboardShortcut("r", modifiers: [.command])
+                
+                Button {
+                    copyPackedContext()
+                    triggerCopyAnimation.toggle()
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                        .symbolEffect(.bounce.up.byLayer, options: .speed(1.8), value: triggerCopyAnimation)
+                }
+                .keyboardShortcut("c", modifiers: [.command, .shift])
             }
         }
     }
@@ -102,6 +135,11 @@ struct ContentView: View {
         if panel.runModal() == .OK, let url = panel.url {
             project.rootURL = url
             project.loadFileTree()
+            DispatchQueue.main.async {
+                if let first = project.fileTree?.children?.first {
+                    focusedNodeIDs = [first.id]
+                }
+            }
         }
     }
     
@@ -150,5 +188,14 @@ struct ContentView: View {
                 }
             }
         }
+    }
+    
+    private func copyPackedContext() {
+        let text = project.packedText
+        guard !text.isEmpty else { return }
+
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
     }
 }
