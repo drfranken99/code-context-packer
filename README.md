@@ -1,5 +1,7 @@
 [한국어로 보기](./README.ko.md)
 
+[Read Tutorial](./tutorial_en.md)
+
 # CodeContextPacker
 
 **Curate and pack your code context for conversational AI.**

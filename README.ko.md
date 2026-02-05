@@ -1,5 +1,7 @@
 [Read this in English](./README.md)
 
+[사용법 보기](./tutorial_ko.md)
+
 
 # CodeContextPacker
 **AI 채팅용 코드 컨텍스트 큐레이션 및 패킹 도구**
